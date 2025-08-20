@@ -1,52 +1,50 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import NoteForm from '../NoteForm/NoteForm';
-import css from './NoteModal.module.css';
+import { useEffect } from "react";
+import type { PropsWithChildren } from "react";
+import { createPortal } from "react-dom";
+import styles from "./NoteModal.module.css";
 
-interface NoteModalProps {
+interface ModalProps {
   onClose: () => void;
-  onNoteCreated: () => void;
 }
 
-const NoteModal: React.FC<NoteModalProps> = ({ onClose, onNoteCreated }) => {
+export default function Modal({
+  onClose,
+  children,
+}: PropsWithChildren<ModalProps>) {
+ 
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalOverflow;
     };
+  }, []);
+
+   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
+ 
+  function handleBackdropClick(
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) {
+    if (e.target === e.currentTarget) onClose();
+  }
 
   return createPortal(
     <div
-      className={css.backdrop}
+      className={styles.backdrop}
       role="dialog"
       aria-modal="true"
       onClick={handleBackdropClick}
     >
-      <div className={css.modal}>
-        <NoteForm 
-          onCancel={onClose}
-          onSubmit={onNoteCreated}
-        />
-      </div>
+      <div className={styles.modal}>{children}</div>
     </div>,
     document.body
   );
-};
-
-export default NoteModal;
+}

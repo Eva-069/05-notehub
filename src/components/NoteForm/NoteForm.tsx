@@ -1,109 +1,132 @@
-import React from 'react';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
-import { useMutation } from '@tanstack/react-query';
-import { createNote, CreateNoteData } from '../../services/noteService';
-import { NoteTag } from '../../types/note';
-import css from './NoteForm.module.css';
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import type { FormikHelpers } from "formik";
+import * as Yup from "yup";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createNote } from "../../services/noteServices";
+import styles from "./NoteForm.module.css";
+import type { Note } from "../../types/note";
+
+type NoteTag = Note["tag"];
 
 interface NoteFormProps {
   onCancel: () => void;
-  onSubmit: () => void;
+}
+
+interface NoteFormValues {
+  title: string;
+  content: string;
+  tag: NoteTag | "";
 }
 
 const validationSchema = Yup.object({
   title: Yup.string()
-    .min(3, 'Title must be at least 3 characters')
-    .max(50, 'Title must be at most 50 characters')
-    .required('Title is required'),
-  content: Yup.string()
-    .max(500, 'Content must be at most 500 characters'),
-  tag: Yup.string()
-    .oneOf(['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'], 'Invalid tag')
-    .required('Tag is required')
+    .min(3, "Minimum 3 characters")
+    .max(50, "Maximum 50 characters")
+    .required("Title is required"),
+  content: Yup.string().max(500, "Maximum 500 characters"),
+  tag: Yup.mixed<NoteTag>()
+    .oneOf(["Todo", "Work", "Personal", "Meeting", "Shopping"], "Invalid tag")
+    .required("Tag is required"),
 });
 
-const NoteForm: React.FC<NoteFormProps> = ({ onCancel, onSubmit }) => {
-  const createMutation = useMutation({
-    mutationFn: createNote,
+export default function NoteForm({ onCancel }: NoteFormProps) {
+  const initialValues: NoteFormValues = { title: "", content: "", tag: "" };
+
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (note: { title: string; content: string; tag: NoteTag }) =>
+      createNote(note),
     onSuccess: () => {
-      onSubmit();
-    }
+      // після створення ноти інвалідовуємо кеш списку
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      onCancel();
+    },
   });
 
-  const initialValues: CreateNoteData = {
-    title: '',
-    content: '',
-    tag: 'Todo' as NoteTag
-  };
-
-  const handleSubmit = (values: CreateNoteData) => {
-    createMutation.mutate(values);
-  };
+  async function handleSubmit(
+    values: NoteFormValues,
+    helpers: FormikHelpers<NoteFormValues>
+  ) {
+    try {
+      await mutation.mutateAsync({
+        title: values.title.trim(),
+        content: values.content.trim(),
+        tag: values.tag as NoteTag,
+      });
+      helpers.resetForm();
+    } finally {
+      helpers.setSubmitting(false);
+    }
+  }
 
   return (
     <Formik
       initialValues={initialValues}
       validationSchema={validationSchema}
+      validateOnBlur
+      validateOnChange
       onSubmit={handleSubmit}
     >
-      {({ isSubmitting }) => (
-        <Form className={css.form}>
-          <div className={css.formGroup}>
+      {({ isSubmitting, isValid, dirty }) => (
+        <Form className={styles.form}>
+          <div className={styles.formGroup}>
             <label htmlFor="title">Title</label>
-            <Field 
-              id="title" 
-              type="text" 
-              name="title" 
-              className={css.input} 
-            />
-            <ErrorMessage name="title" component="span" className={css.error} />
+            <Field id="title" type="text" name="title" className={styles.input} />
+            <ErrorMessage name="title">
+              {(msg) => <span className={styles.error}>{msg}</span>}
+            </ErrorMessage>
           </div>
 
-          <div className={css.formGroup}>
+          <div className={styles.formGroup}>
             <label htmlFor="content">Content</label>
             <Field
               as="textarea"
               id="content"
               name="content"
               rows={8}
-              className={css.textarea}
+              className={styles.textarea}
             />
-            <ErrorMessage name="content" component="span" className={css.error} />
+            <ErrorMessage name="content">
+              {(msg) => <span className={styles.error}>{msg}</span>}
+            </ErrorMessage>
           </div>
 
-          <div className={css.formGroup}>
+          <div className={styles.formGroup}>
             <label htmlFor="tag">Tag</label>
-            <Field as="select" id="tag" name="tag" className={css.select}>
+            <Field as="select" id="tag" name="tag" className={styles.select}>
+              <option value="">Select tag…</option>
               <option value="Todo">Todo</option>
               <option value="Work">Work</option>
               <option value="Personal">Personal</option>
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
             </Field>
-            <ErrorMessage name="tag" component="span" className={css.error} />
+            <ErrorMessage name="tag">
+              {(msg) => <span className={styles.error}>{msg}</span>}
+            </ErrorMessage>
           </div>
 
-          <div className={css.actions}>
-            <button 
-              type="button" 
-              className={css.cancelButton}
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.cancelButton}
               onClick={onCancel}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
+
             <button
               type="submit"
-              className={css.submitButton}
-              disabled={isSubmitting || createMutation.isPending}
+              className={styles.submitButton}
+              disabled={!isValid || !dirty || isSubmitting}
             >
-              Create note
+              {mutation.isPending ? "Creating..." : "Create note"}
             </button>
           </div>
         </Form>
       )}
     </Formik>
   );
-};
-
-export default NoteForm;
+}

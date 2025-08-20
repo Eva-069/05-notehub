@@ -1,100 +1,63 @@
-import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDebounce } from 'use-debounce';
-import { fetchNotes } from '../../services/noteService';
-import {  type Note } from '../../types/note';
-import NoteList from '../NoteList/NoteList';
-import NoteModal from '../NoteModal/NoteModal';
-import Pagination from '../Pagination/Pagination';
-import SearchBox from '../SearchBox/SearchBox';
-import css from './App.module.css';
+import { useState } from "react";
+import {
+  keepPreviousData,
+  useQuery,
+} from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
+import styles from "./App.module.css";
+import { fetchNotes } from "../../services/noteServices";
+import NoteList from "../NoteList/NoteList";
+import SearchBox from "../SearchBox/SearchBox";
+import Pagination from "../Pagination/Pagination";
+import Modal from "../NoteModal/NoteModal";
+import NoteForm from "../NoteForm/NoteForm";
 
-const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  
-  const queryClient = useQueryClient();
-  
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['notes', currentPage, debouncedSearchTerm],
-    queryFn: () => fetchNotes({ 
-      page: currentPage, 
-      perPage: 12,
-      search: debouncedSearchTerm 
-    }),
-    placeholderData: (previousData) => previousData
+export default function App() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 500);
+  const [isModalOpen, setModalOpen] = useState(false);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["notes", page, debouncedSearch],
+    queryFn: () => fetchNotes(page, 12, debouncedSearch),
+    placeholderData: keepPreviousData,
   });
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (selectedPage: number) => {
-    setCurrentPage(selectedPage + 1);
-  };
-
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleNoteCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['notes'] });
-    setIsModalOpen(false);
-  };
-
-  const handleNoteDeleted = () => {
-    queryClient.invalidateQueries({ queryKey: ['notes'] });
-  };
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (isError) {
-    return <div>Error: {error?.message}</div>;
+  // обробка пошуку зі скиданням сторінки
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
   }
 
   return (
-    <div className={css.app}>
-      <header className={css.toolbar}>
-        <SearchBox onSearchChange={handleSearchChange} />
-        
+    <div className={styles.app}>
+      <header className={styles.toolbar}>
+        <SearchBox value={search} onChange={handleSearchChange} />
+
         {data && data.totalPages > 1 && (
           <Pagination
             pageCount={data.totalPages}
-            currentPage={currentPage - 1}
-            onPageChange={handlePageChange}
+            currentPage={page}
+            onPageChange={setPage}
           />
         )}
-        
-        <button className={css.button} onClick={handleOpenModal}>
+
+        <button className={styles.button} onClick={() => setModalOpen(true)}>
           Create note +
         </button>
       </header>
-      
-      {data && data.notes.length > 0 && (
-        <NoteList 
-          notes={data.notes} 
-          onNoteDeleted={handleNoteDeleted}
-        />
-      )}
-      
+
+      {isLoading}
+      {isError }
+
+      {data && data.notes.length > 0 && <NoteList notes={data.notes} />}
+
       {isModalOpen && (
-        <NoteModal 
-          onClose={handleCloseModal}
-          onNoteCreated={handleNoteCreated}
-        />
+        <Modal onClose={() => setModalOpen(false)}>
+          <NoteForm onCancel={() => setModalOpen(false)} />
+        </Modal>
       )}
     </div>
   );
-};
-
-export default App;
+}

@@ -1,45 +1,46 @@
-import React from 'react';
-import ReactPaginate from 'react-paginate';
-import css from './Pagination.module.css';
+import ReactPaginate from "react-paginate";
+import styles from "./Pagination.module.css";
 
 interface PaginationProps {
   pageCount: number;
-  currentPage: number;
-  onPageChange: (selectedPage: number) => void;
+  currentPage?: number; 
+  onPageChange: (page: number) => void; 
 }
 
-const Pagination: React.FC<PaginationProps> = ({ 
-  pageCount, 
-  currentPage, 
-  onPageChange 
-}) => {
-  const handlePageClick = (event: { selected: number }) => {
-    onPageChange(event.selected);
-  };
+export default function Pagination({
+  pageCount,
+  currentPage,
+  onPageChange,
+}: PaginationProps) {
+  if (pageCount <= 1) return null;
+
+  function handlePageChange(selectedItem: { selected: number }) {
+    onPageChange(selectedItem.selected + 1);
+  }
 
   return (
-    <ReactPaginate
-      pageCount={pageCount}
-      forcePage={currentPage}
-      onPageChange={handlePageClick}
-      containerClassName={css.pagination}
-      pageClassName={css.pageItem}
-      pageLinkClassName={css.pageLink}
-      previousClassName={css.pageItem}
-      previousLinkClassName={css.pageLink}
-      nextClassName={css.pageItem}
-      nextLinkClassName={css.pageLink}
-      activeClassName={css.active}
-      disabledClassName={css.disabled}
-      breakClassName={css.pageItem}
-      breakLinkClassName={css.pageLink}
-      previousLabel="‹"
-      nextLabel="›"
-      breakLabel="..."
-      marginPagesDisplayed={1}
-      pageRangeDisplayed={3}
-    />
+    <nav aria-label="Notes pagination" className={styles.wrapper}>
+      <ReactPaginate
+        pageCount={pageCount}
+        onPageChange={handlePageChange}
+        forcePage={typeof currentPage === "number" ? currentPage - 1 : undefined}
+        marginPagesDisplayed={1}
+        pageRangeDisplayed={3}
+        previousLabel="←"
+        nextLabel="→"
+        breakLabel="…"
+        containerClassName={styles.pagination}
+        pageClassName={styles.page}
+        pageLinkClassName={styles.link}
+        previousClassName={styles.page}
+        nextClassName={styles.page}
+        previousLinkClassName={styles.link}
+        nextLinkClassName={styles.link}
+        breakClassName={styles.page}
+        breakLinkClassName={styles.link}
+        activeClassName={styles.active}
+        disabledClassName={styles.disabled}
+      />
+    </nav>
   );
-};
-
-export default Pagination;
+}
