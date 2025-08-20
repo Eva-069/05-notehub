@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import styles from "./App.module.css";
-import { fetchNotes } from "../../services/noteServices";
+import { fetchNotes } from "../../services/noteService";
 import NoteList from "../NoteList/NoteList";
 import SearchBox from "../SearchBox/SearchBox";
 import Pagination from "../Pagination/Pagination";
@@ -24,7 +24,6 @@ export default function App() {
     placeholderData: keepPreviousData,
   });
 
-  // обробка пошуку зі скиданням сторінки
   function handleSearchChange(value: string) {
     setSearch(value);
     setPage(1);
