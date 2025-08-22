@@ -11,6 +11,10 @@ export interface PaginatedNotes {
 
 const API_KEY = import.meta.env.VITE_NOTEHUB_TOKEN;
 
+if (!API_KEY) {
+  throw new Error("VITE_NOTEHUB_TOKEN is not defined in environment variables");
+}
+
 const api = axios.create({
   baseURL: "https://notehub-public.goit.study/api", 
   headers: {
@@ -18,6 +22,16 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error("Unauthorized: Check your VITE_NOTEHUB_TOKEN in environment variables");
+    }
+    return Promise.reject(error);
+  }
+);
 
 export async function fetchNotes(
   page: number,

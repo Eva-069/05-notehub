@@ -2,28 +2,31 @@ import ReactPaginate from "react-paginate";
 import styles from "./Pagination.module.css";
 
 interface PaginationProps {
-  pageCount: number;
-  currentPage?: number; 
-  onPageChange: (page: number) => void; 
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
 }
 
 export default function Pagination({
-  pageCount,
+  totalPages,
   currentPage,
   onPageChange,
 }: PaginationProps) {
-  if (pageCount <= 1) return null;
+  if (totalPages <= 1) return null;
+  
+  const validCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
 
   function handlePageChange(selectedItem: { selected: number }) {
-    onPageChange(selectedItem.selected + 1);
+    const newPage = selectedItem.selected + 1;
+    onPageChange(newPage);
   }
 
   return (
     <nav aria-label="Notes pagination" className={styles.wrapper}>
       <ReactPaginate
-        pageCount={pageCount}
+        pageCount={totalPages}
         onPageChange={handlePageChange}
-        forcePage={typeof currentPage === "number" ? currentPage - 1 : undefined}
+        forcePage={validCurrentPage - 1}
         marginPagesDisplayed={1}
         pageRangeDisplayed={3}
         previousLabel="←"
